@@ -4,8 +4,8 @@ class Pedido
 {
     constructor (IDunico, IDcliente, status, data)
     {
-        this.IDcliente = IDcliente;
         this.IDunico = IDunico;
+        this.IDcliente = IDcliente;
         this.status = status;
         this.data = data;
     }
@@ -13,10 +13,10 @@ class Pedido
 
 class Funcionario
 {
-    constructor (IDunico, nomeUsuario, cpf, email, senha)
+    constructor (IDunico, nome, cpf, email, senha)
     {
         this.IDunico = IDunico;
-        this.nomeUsuario = nomeUsuario;
+        this.nome = nome;
         this.cpf = cpf;
         this.email = email;
         this.senha = senha;
@@ -36,10 +36,11 @@ class Cliente
     }
 }
 
-class Produtos
+class Produto
 {
-    constructor (validade, preco, estoque, nome, descricao)
+    constructor (IDunico, validade, preco, estoque, nome, descricao)
     {
+        this.IDunico = IDunico;
         this.validade = validade;
         this.preco = preco;
         this.estoque = estoque;
@@ -57,19 +58,6 @@ class Sistema
         this.pedidos = [];
         this.produtos = [];
         this.usuarioLogado = null;
-    }
-
-    fazerCadastro (usuario, tipo)
-    {
-        if (tipo == "funcionario")
-        {
-            this.funcionarios.push(usuario);
-        }
-        else if (tipo == "cliente")
-        {
-            this.clientes.push(usuario);
-        }
-        console.log("Cadastrado com sucesso!");
     }
 
     fazerLogin(IDunico, senha, tipo)
@@ -92,6 +80,19 @@ class Sistema
         {
             console.log("ID ou senha incorretos");
         }
+    }
+
+    fazerCadastro (usuario, tipo)
+    {
+        if (tipo == "funcionario")
+        {
+            this.funcionarios.push(usuario);
+        }
+        else if (tipo == "cliente")
+        {
+            this.clientes.push(usuario);
+        }
+        console.log("Cadastrado com sucesso!");
     }
 
     sair()
@@ -215,3 +216,249 @@ class Sistema
     }
 }
 
+const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+});
+
+const sistema = new Sistema();
+
+function mostrarMenu()
+{
+    console.log("\nMenu:");
+    console.log("1. Fazer Login");
+    console.log("2. Fazer Cadastro");
+    console.log("3. Sair do Programa");
+    if (sistema.usuarioLogado)
+    {
+        console.log("4. Ver Meus Dados");
+        console.log("5. Modificar Meus Dados");
+        if (sistema.usuarioLogado instanceof Funcionario)
+        {
+            console.log("6. Ver Lista de Pedidos");
+            console.log("7. Ver Lista de Produtos");
+            console.log("8. Ver Lista de Clientes");
+            console.log("9. Mudar status do pedido");
+            console.log("10. Adicionar Produto");
+            console.log("11. Editar Produto");
+            console.log("12. Excluir Produto");
+        }
+        else if (sistema.usuarioLogado instanceof Cliente)
+        {
+            console.log("6. Ver Lista de Produtos");
+            console.log("7. Fazer pedido");
+            console.log("8. Cancelar pedido");
+            console.log("9. Ver meus pedidos");
+            console.log("10. Avaliar pedido");
+            console.log("11. Visualizar avaliacoes");
+        }
+        console.log("0. Logout");
+    }
+}
+
+function executarOpcao(opcao)
+{
+    switch (opcao)
+    {
+        case "1":
+            rl.question("Tipo (funcionario/cliente): ", tipo => {
+                rl.question("ID: ", IDunico => {
+                    rl.question("Senha: ", senha => {
+                        sistema.fazerLogin(IDunico, senha, tipo);
+                        mostrarMenu();
+                        rl.prompt();
+                    });
+                });
+            });
+            break;
+        case "2":
+            rl.question("Tipo (funcionario/cliente): ", tipo => {
+                rl.question("ID: ", IDunico => {
+                    rl.question("Nome: ", nome => {
+                        rl.question("CPF: ", cpf => {
+                            rl.question("Email: ", email => {
+                                rl.question("Senha: ", senha => {
+                                    if (tipo == "cliente")
+                                    {
+                                        rl.question("Data de Nascimentp: ", dataNascimento => {
+                                            const cliente = new Cliente(IDunico, nome, dataNascimento, cpf, email, senha);
+                                            sistema.fazerCadastro(cliente, tipo);
+                                        });
+                                    }
+                                    else if (tipo == "funcionario")
+                                    {
+                                        const funcionario = new Funcionario(IDunico, nome, cpf, email, senha);
+                                        sistema.fazerCadastro(funcionario, tipo);
+                                    }
+                                    mostrarMenu();
+                                    rl.prompt();
+                                });
+                            });
+                        });
+                    });
+                });
+            });
+            break;
+        case "3":
+            console.log("Programa encerrado");
+            rl.close();
+            break;
+        case "4":
+            sistema.verMeusDados();
+            mostrarMenu();
+            rl.prompt();
+            break;
+        case "5":
+            rl.question("Novos Dados (chave:valor, separados por virgula): ", novosDadosString => {
+                const novosDadosArray = novosDadosString.split(",").map(item => item.split(":"));
+                const novosDados = Object.fromEntries(novosDadosArray);
+                sistema.modificarMeusDados(novosDados);
+                mostrarMenu();
+                rl.prompt();
+            });
+            break;
+        case "6":
+            if (sistema.usuarioLogado instanceof Funcionario)
+            {
+                console.log(sistema.verListaPedidos());
+            }
+            else if (sistema.usuarioLogado instanceof Cliente)
+            {
+                console.log(sistema.verListaProdutos());
+            }
+            mostrarMenu();
+            rl.prompt();
+            break;
+        case "7":
+            if (sistema.usuarioLogado instanceof Funcionario)
+            {
+                console.log(sistema.verListaProdutos());
+                mostrarMenu();
+                rl.prompt();
+            }
+            else if (sistema.usuarioLogado instanceof Cliente)
+            {
+                rl.question("ID do Pedido: ", IDunico => {
+                    rl.question("ID do Cliente: ", IDcliente => {
+                        const pedido = new Pedido(IDunico, IDcliente, 'pendente', new Date());
+                        sistema.fazerPedido(pedido);
+                        mostrarMenu();
+                        rl.prompt();
+                    });
+                });
+            }
+            break;
+        case "8":
+            if (sistema.usuarioLogado instanceof Funcionario)
+            {
+                console.log(sistema.verListaClientes());
+                mostrarMenu();
+                rl.prompt();
+            }
+            else if (sistema.usuarioLogado instanceof Cliente)
+            {
+                rl.question("ID do Pedido: ", IDunico => {
+                    sistema.cancelarPedido(IDunico);
+                    mostrarMenu();
+                    rl.prompt();
+                });
+            }
+            break;
+        case "9":
+            if (sistema.usuarioLogado instanceof Funcionario)
+            {
+                rl.question("ID do Pedido: ", IDunico => {
+                    rl.question("Novo Status: ", novoStatus => {
+                        sistema.mudarStatusPedido(IDunico, novoStatus);
+                        mostrarMenu();
+                        rl.prompt();
+                    });
+                });
+            }
+            else if (sistema.usuarioLogado instanceof Cliente)
+            {
+                console.log(sistema.verMeusPedidos(sistema.usuarioLogado.IDunico));
+                mostrarMenu();
+                rl.prompt();
+            }
+            break;
+        case "10":
+            if (sistema.usuarioLogado instanceof Funcionario)
+            {
+                rl.question("ID: ", IDunico => {
+                    rl.question("Nome: ", nome => {
+                        rl.question("Descricao: ", descricao => {
+                            rl.question("Data de Validade: ", dataValidade => {
+                                rl.question("Preco: ", preco => {
+                                    rl.question("Quantidade em Estoque: ", estoque => {
+                                        const produto = new Produto(IDunico, dataValidade, preco, estoque, nome, descricao);
+                                        sistema.adicionarProduto(produto);
+                                        mostrarMenu();
+                                        rl.prompt();
+                                    });
+                                });
+                            });
+                        });
+                    });
+                });
+            }
+            else if (sistema.usuarioLogado instanceof Cliente)
+            {
+                rl.question("ID do Pedido: ", IDunico => {
+                    rl.question("Avaliacao: ", avaliacao => {
+                        sistema.avaliarPedido(IDunico, avaliacao);
+                        mostrarMenu();
+                        rl.prompt();
+                    });
+                });
+            }
+            break;
+        case "11":
+            if (sistema.usuarioLogado instanceof Funcionario)
+            {
+                rl.question("ID do Produto: ", IDunico => {
+                    rl.question("Novos Dados (chave:valor, separados por virgula): ", novosDadosString => {
+                        const novosDadosArray = novosDadosString.split(",").map(item => item.split(":"));
+                        const novosDados = Object.fromEntries(novosDadosArray);
+                        sistema.editarProduto(IDunico, novosDados);
+                        mostrarMenu();
+                        rl.prompt();
+                    });
+                });
+            }
+            else if (sistema.usuarioLogado instanceof Cliente)
+            {
+                console.log(sistema.visualizarAvaliacoes(sistema.usuarioLogado.IDunico));
+                mostrarMenu();
+                rl.prompt();
+            }
+            break;
+        case "12":
+            if (sistema.usuarioLogado instanceof Funcionario)
+            {
+                rl.question("ID do Produto: ", IDunico => {
+                    sistema.excluirProduto(IDunico);
+                    mostrarMenu();
+                    rl.prompt();
+                });
+            }
+            break;
+        case "0":
+            sistema.sair();
+            mostrarMenu();
+            rl.prompt();
+            break;
+        default:
+            console.log("Opcao invalida");
+            mostrarMenu();
+            rl.prompt();
+            break;
+    }
+}
+
+mostrarMenu();
+rl.prompt();
+
+rl.on("line", linha => {
+    executarOpcao(linha.trim());
+});
